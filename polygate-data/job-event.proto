@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package polygate.data;
+
+message MetadataItem {
+	string key = 1;
+	repeated string values = 2;
+}
+
+message JobError {
+	uint32 code = 1;
+	string message = 2;
+}
+
+message JobEvent {
+	enum Status {
+		RESOLVED = 0;
+		REJECTED = 1;
+		AWAITING = 2;
+		FIRED = 3;
+	}
+	bytes payload = 1;
+	string id = 2;
+	string method = 3;
+	string service = 4;
+	Status status = 5;
+	string consumer_id = 6;
+	string group = 7;
+	string stream = 8;
+	string stream_id = 9;
+	string producer_id = 10;
+	repeated MetadataItem metadata = 11;
+	JobError error = 12;
+}
