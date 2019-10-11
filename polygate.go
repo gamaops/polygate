@@ -1,6 +1,7 @@
 package main
 
 import (
+	//_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"strings"
@@ -16,7 +17,13 @@ var instanceProducerID string
 
 func init() {
 
-	log.SetFormatter(&log.JSONFormatter{})
+	prettyLog, exists := os.LookupEnv("PRETTY_LOG")
+
+	if exists && prettyLog == "true" {
+		log.SetFormatter(&log.TextFormatter{})
+	} else {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
 
 	log.SetOutput(os.Stdout)
 
@@ -74,6 +81,7 @@ func main() {
 		}()
 	}
 
+	//http.ListenAndServe("localhost:8088", nil)
 	wg.Wait()
 
 }

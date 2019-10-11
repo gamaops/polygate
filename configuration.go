@@ -89,13 +89,11 @@ func loadParameters() Parameters {
 
 type ConfigurationMethodExpose struct {
 	// TODO: Add pattern validation: queue, fireAndForget
-	Pattern     string
-	Name        string
-	Capped      uint64
-	Stream      string
-	Deadline    uint32
-	ExpiresIn   uint32
-	DropRequest bool
+	Pattern            string
+	Name               string
+	Capped             uint64
+	Stream             string
+	TimeoutWaitForNext string `yaml:"timeoutWaitForNext"`
 }
 
 type ConfigurationServiceExpose struct {
@@ -105,7 +103,7 @@ type ConfigurationServiceExpose struct {
 		Block       string
 		Retry       struct {
 			Limit    int64
-			PageSize int64
+			PageSize int64 `yaml:"pageSize"`
 			Deadline string
 		}
 	}
@@ -113,7 +111,7 @@ type ConfigurationServiceExpose struct {
 		Address     string
 		Port        uint16
 		Healthcheck struct {
-			MaxRetryTime uint32
+			MaxRetryTime uint32 `yaml:"maxRetryTime"`
 		}
 	}
 	Methods []ConfigurationMethodExpose

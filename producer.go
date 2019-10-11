@@ -2,6 +2,7 @@ package main
 
 import (
 	"strings"
+	"sync"
 
 	polygate_data "polygate/polygate-data"
 
@@ -12,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var jobAwaitChannels = make(map[string]chan *polygate_data.JobEvent)
+var jobAwaitChannels = sync.Map{}
 
 func logEvent(job *Job, data []byte) {
 	log.WithFields(map[string]interface{}{
@@ -55,6 +56,11 @@ func sendJob(job *Job, method *ConfigurationMethodExpose) string {
 
 	streamID, err := jobClient.XAdd(&args).Result()
 
+	log.WithFields(map[string]interface{}{
+		"jobId":    job.event.Id,
+		"streamId": streamID,
+	}).Info("Job added to stream")
+
 	if err != nil {
 		log.Fatalf("Error while sending job: %v", err)
 	}
@@ -65,10 +71,11 @@ func sendJob(job *Job, method *ConfigurationMethodExpose) string {
 
 func sendJobAndAwait(job *Job, method *ConfigurationMethodExpose) *polygate_data.JobEvent {
 
-	jobAwaitChannels[job.event.Id] = make(chan *polygate_data.JobEvent)
+	ch := make(chan *polygate_data.JobEvent)
+	jobAwaitChannels.Store(job.event.Id, ch)
 	go sendJob(job, method)
-	event := <-jobAwaitChannels[job.event.Id]
-	delete(jobAwaitChannels, job.event.Id)
+	event := <-ch
+	jobAwaitChannels.Delete(job.event.Id)
 	return event
 
 }
@@ -82,9 +89,9 @@ func receiveMessagesFromPubSub(channel <-chan *redis.Message) {
 			continue
 		}
 		log.Debugf("Received message from channel: %v", event.Id)
-		awaitChannel, ok := jobAwaitChannels[event.Id]
+		awaitChannel, ok := jobAwaitChannels.Load(event.Id)
 		if ok {
-			awaitChannel <- event
+			awaitChannel.(chan *polygate_data.JobEvent) <- event
 			continue
 		}
 		log.Warnf("Unable to find a listener to event, it'll be discarded: %v", event.Id)

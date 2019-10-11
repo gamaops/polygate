@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,36 +18,27 @@ type ConsumerRedisStack struct {
 	retryArgs     []interface{}
 	index         int
 	client        *redis.Client
-	previous      *ConsumerRedisStack
 	xretrySha     string
-	lock          sync.Mutex
-	linked        bool
+	available     int64
+	consuming     int32
+	wakeUpCh      chan bool
+}
+
+func (c *ConsumerRedisStack) WakeUp() {
+	c.wakeUpCh <- true
 }
 
 // Consumer is a group of Redis clients with specifications about the service being consumed
 type Consumer struct {
-	service        *ConfigurationServiceExpose
-	maxCount       uint32
-	pendingCount   int32
-	availableCount uint32
-	stack          *ConsumerRedisStack
-	lock           sync.Mutex
-}
-
-// StreamItem represents a stream item for XRETRY command
-type StreamItem struct {
-	id     string
-	stream string
-	data   map[string]interface{}
+	service *ConfigurationServiceExpose
+	stacks  []*ConsumerRedisStack
 }
 
 var consumers = make(map[string]*Consumer)
 
 func acquireJobs(consumer *Consumer, stack *ConsumerRedisStack) {
 
-	stack.lock.Lock()
-
-	stack.retryKeys[3] = strconv.FormatInt(stack.readGroupArgs.Count, 10)
+	stack.retryKeys[3] = strconv.FormatInt(stack.available, 10)
 
 	retryMessages, err := stack.client.EvalSha(
 		stack.xretrySha,
@@ -57,36 +46,26 @@ func acquireJobs(consumer *Consumer, stack *ConsumerRedisStack) {
 		stack.retryArgs...,
 	).Result()
 
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		log.Fatalf("Error while executing XRETRY script: %v", err)
 	}
 
-	// TODO: atomic add pendingCount
 	switch retryMessagesTyped := retryMessages.(type) {
 	case []interface{}:
-		retryMessagesCount := int32(len(retryMessagesTyped))
-		atomic.AddInt32(&consumer.pendingCount, retryMessagesCount)
-		stack.readGroupArgs.Count -= int64(retryMessagesCount)
+		retryMessagesCount := -int64(len(retryMessagesTyped))
+		atomic.AddInt64(&stack.available, retryMessagesCount)
 		for _, retryMessage := range retryMessagesTyped {
-			// TODO: Handle retry jobs
-			fmt.Println(retryMessage.(StreamItem))
+			go parseRetryItemToJob(consumer, stack, retryMessage.([]interface{}))
 		}
 		break
 	}
 
-	if stack.readGroupArgs.Count == 0 {
-		stack.lock.Unlock()
+	if atomic.CompareAndSwapInt64(&stack.available, 0, 0) {
+		atomic.StoreInt32(&stack.consuming, 0)
 		return
 	}
 
-	if err != nil && err != redis.Nil {
-		log.Fatalf("Error while consuming streams (retry): %v", err)
-	}
-
-	log.Infof("Retry: %v", retryMessages)
-
-	log.Info("Consuming")
-
+	stack.readGroupArgs.Count = stack.available
 	readMessages, err := stack.client.XReadGroup(&stack.readGroupArgs).Result()
 
 	// redis.Nil is when reading exists by timeout
@@ -94,109 +73,32 @@ func acquireJobs(consumer *Consumer, stack *ConsumerRedisStack) {
 		log.Fatalf("Error while consuming streams: %v", err)
 	}
 
-	var messagesCount int32 = 0
-
 	for _, readMessage := range readMessages {
-		for _, message := range readMessage.Messages {
-			job := parseStreamItemToJob(message.ID, message.Values)
-			job.stack = stack
-			job.consumer = consumer
-			go clientJobHandlers[job.event.Service][job.event.Method](job)
+		streamMessagesCount := -int64(len(readMessage.Messages))
+		atomic.AddInt64(&stack.available, streamMessagesCount)
+		for i := range readMessage.Messages {
+			message := &readMessage.Messages[i]
+			go parseStreamItemToJob(consumer, stack, readMessage.Stream, message.ID, message.Values)
 		}
-		streamMessagesCount := int32(len(readMessage.Messages))
-		messagesCount += streamMessagesCount
-		stack.readGroupArgs.Count -= int64(streamMessagesCount)
 	}
 
-	if messagesCount > 0 {
-		atomic.AddInt32(&consumer.pendingCount, messagesCount)
-	}
-
-	if stack.readGroupArgs.Count > 0 {
-		defer consumeService(consumer.service)
-		defer linkRedisStack(consumer, stack)
-	}
-
-	stack.lock.Unlock()
-
-}
-
-func linkRedisStack(consumer *Consumer, stack *ConsumerRedisStack) {
-	consumer.lock.Lock()
-
-	defer consumer.lock.Unlock()
-
-	if stack.linked {
+	if atomic.CompareAndSwapInt64(&stack.available, 0, 0) {
+		atomic.StoreInt32(&stack.consuming, 0)
 		return
 	}
 
-	stack.linked = true
-	availableCount := 1
-	first := stack.previous
-
-	for first != nil {
-		availableCount++
-		if first.previous == nil {
-			first.previous = consumer.stack
-			break
-		}
-		first = first.previous
-	}
-
-	consumer.stack = stack
-
-	atomic.AddUint32(&consumer.availableCount, uint32(availableCount))
+	atomic.StoreInt32(&stack.consuming, 0)
+	stack.WakeUp()
 
 }
 
-func consumeService(service *ConfigurationServiceExpose) {
+func acquireJobsLoop(consumer *Consumer, stack *ConsumerRedisStack) {
 
-	consumer := consumers[service.Service]
-
-	consumer.lock.Lock()
-
-	freeSlots := consumer.service.Consumer.Concurrency - uint32(consumer.pendingCount)
-
-	if consumer.stack == nil || consumer.availableCount == 0 || freeSlots <= 0 {
-		consumer.lock.Unlock()
-		return
-	}
-
-	availableCount := atomic.SwapUint32(&consumer.availableCount, 0)
-	stack := consumer.stack
-	consumer.stack = nil
-
-	consumer.lock.Unlock()
-
-	countPerClient := freeSlots / availableCount
-	if countPerClient > consumer.maxCount {
-		countPerClient = consumer.maxCount
-	}
-	modulo := int32(countPerClient % 1)
-
-	if countPerClient < 1 {
-		countPerClient = 0
-		modulo = int32(freeSlots)
-	} else if modulo > 0 {
-		modulo = int32(availableCount) * modulo
-	}
-
-	for stack != nil {
-		cursor := stack
-		cursor.linked = false
-		count := countPerClient
-		if atomic.AddInt32(&modulo, -1) > -1 {
-			count++
+	for range stack.wakeUpCh {
+		if atomic.SwapInt32(&stack.consuming, 1) == 1 {
+			continue
 		}
-		if count == 0 {
-			linkRedisStack(consumer, cursor)
-			break
-		}
-		previous := cursor.previous
-		cursor.previous = nil
-		cursor.readGroupArgs.Count = int64(count)
-		go acquireJobs(consumer, cursor)
-		stack = previous
+		go acquireJobs(consumer, stack)
 	}
 
 }
@@ -217,7 +119,7 @@ func buildConsumerRedisStack(
 	clients map[int]*redis.Client,
 	readGroupArgs redis.XReadGroupArgs,
 	service *ConfigurationServiceExpose,
-) *ConsumerRedisStack {
+) []*ConsumerRedisStack {
 
 	xretryLoadScript, err := Asset("xretry.lua")
 
@@ -225,7 +127,9 @@ func buildConsumerRedisStack(
 		log.Fatalf("Error while trying to load XRETRY script: %v", err)
 	}
 
-	var stack *ConsumerRedisStack
+	clientsCount := len(clients)
+	stacks := make([]*ConsumerRedisStack, clientsCount)
+	concurrency := int64(int(service.Consumer.Concurrency) / clientsCount)
 
 	deadline, err := time.ParseDuration(service.Consumer.Retry.Deadline)
 
@@ -247,7 +151,7 @@ func buildConsumerRedisStack(
 		if err != nil && err != redis.Nil {
 			log.Fatalf("Error while loading script XRETRY: %v", err)
 		}
-		next := &ConsumerRedisStack{
+		stacks[index] = &ConsumerRedisStack{
 			readGroupArgs: redis.XReadGroupArgs{
 				Group:    readGroupArgs.Group,
 				Streams:  readGroupArgs.Streams,
@@ -266,15 +170,14 @@ func buildConsumerRedisStack(
 			retryArgs: retryArgs,
 			client:    client,
 			index:     index,
-			previous:  stack,
 			xretrySha: xretrySha,
-			lock:      sync.Mutex{},
-			linked:    true,
+			available: concurrency,
+			consuming: 0,
+			wakeUpCh:  make(chan bool, 1),
 		}
-		stack = next
 	}
 
-	return stack
+	return stacks
 }
 
 func loadConsumers() {
@@ -285,7 +188,9 @@ func loadConsumers() {
 		log.Fatalf("Unable to get hostname: %v", err)
 	}
 
-	for _, service := range configuration.Protos.Services {
+	for i := range configuration.Protos.Services {
+
+		service := &configuration.Protos.Services[i]
 
 		startRedisClient(service.Service, 1)
 		var streams []string
@@ -326,16 +231,11 @@ func loadConsumers() {
 			Block:    block,
 		}
 
-		stack := buildConsumerRedisStack(redisClients[service.Service], readGroupArgs, &service)
-		availableCount := uint32(len(redisClients[service.Service]))
+		stacks := buildConsumerRedisStack(redisClients[service.Service], readGroupArgs, service)
 
 		consumers[service.Service] = &Consumer{
-			service:        &service,
-			maxCount:       service.Consumer.Concurrency / availableCount,
-			pendingCount:   0,
-			availableCount: availableCount,
-			stack:          stack,
-			lock:           sync.Mutex{},
+			service: service,
+			stacks:  stacks,
 		}
 	}
 
@@ -343,8 +243,13 @@ func loadConsumers() {
 
 func startConsumers() {
 
-	for _, consumer := range consumers {
-		go consumeService(consumer.service)
+	for i := range consumers {
+		consumer := consumers[i]
+		log.Debugf("Consuming service: %v", consumer.service.Service)
+		for _, stack := range consumer.stacks {
+			stack.WakeUp()
+			go acquireJobsLoop(consumer, stack)
+		}
 	}
 
 }

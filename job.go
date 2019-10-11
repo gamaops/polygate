@@ -5,6 +5,8 @@ import (
 	polygate_data "polygate/polygate-data"
 	"sync/atomic"
 
+	"google.golang.org/grpc"
+
 	"github.com/go-redis/redis"
 	"github.com/golang/protobuf/proto"
 )
@@ -14,14 +16,16 @@ type ReceivedJob interface {
 	Client() *redis.Client
 	Ack() error
 	Resolve() error
-	Reject([]byte) error
+	Reject() error
+	Finish() error
 }
 
 // Job holds pointers and data to represent a task to Polygate
 type Job struct {
-	event    *polygate_data.JobEvent
-	stack    *ConsumerRedisStack
-	consumer *Consumer
+	event     *polygate_data.JobEvent
+	stack     *ConsumerRedisStack
+	consumer  *Consumer
+	rawStream string
 }
 
 // Client returns a job handler Redis client
@@ -36,7 +40,7 @@ func (j *Job) Ack() error {
 		return errors.New("job: job is already resolved, you can't ack")
 	}
 	_, err := j.Client().XAck(
-		j.event.Stream,
+		j.rawStream,
 		j.stack.readGroupArgs.Group,
 		j.event.StreamId,
 	).Result()
@@ -48,6 +52,7 @@ func (j *Job) Resolve() error {
 	if j.stack == nil {
 		return errors.New("job: job is already resolved, you can't resolve it again")
 	}
+
 	client := j.Client()
 	stack := j.stack
 	j.stack = nil
@@ -58,7 +63,10 @@ func (j *Job) Resolve() error {
 
 	data, err := proto.Marshal(j.event)
 
+	atomic.AddInt64(&stack.available, 1)
+
 	if err != nil {
+		stack.WakeUp()
 		return err
 	}
 
@@ -67,7 +75,9 @@ func (j *Job) Resolve() error {
 		data,
 	).Result()
 
-	atomic.AddInt32(&j.consumer.pendingCount, -1)
+	if err == nil {
+		stack.WakeUp()
+	}
 
 	return err
 }
@@ -87,7 +97,10 @@ func (j *Job) Reject() error {
 
 	data, err := proto.Marshal(j.event)
 
+	atomic.AddInt64(&stack.available, 1)
+
 	if err != nil {
+		stack.WakeUp()
 		return err
 	}
 
@@ -96,9 +109,27 @@ func (j *Job) Reject() error {
 		data,
 	).Result()
 
-	atomic.AddInt32(&j.consumer.pendingCount, -1)
+	if err == nil {
+		stack.WakeUp()
+	}
 
 	return err
+}
+
+// Finish finishes the job
+func (j *Job) Finish() error {
+	if j.stack == nil {
+		return errors.New("job: job is already resolved, you can't reject it")
+	}
+
+	stack := j.stack
+	j.stack = nil
+
+	atomic.AddInt64(&stack.available, 1)
+
+	stack.WakeUp()
+
+	return nil
 }
 
 // Reset function to protobuf parser
@@ -139,3 +170,57 @@ func (j *Job) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_Message proto.InternalMessageInfo
+
+type PolygateClientStreamServer interface {
+	SendAndClose(*Job) error
+	Recv() (*Job, error)
+	grpc.ServerStream
+}
+
+type polygateClientStream struct {
+	grpc.ServerStream
+}
+
+func (x *polygateClientStream) SendAndClose(j *Job) error {
+	return x.ServerStream.SendMsg(j)
+}
+
+func (x *polygateClientStream) Recv() (*Job, error) {
+	j := new(Job)
+	if err := x.ServerStream.RecvMsg(j); err != nil {
+		return nil, err
+	}
+	return j, nil
+}
+
+type PolygateClientStreamClient interface {
+	SendAndClose(*Job) error
+	Recv() (*Job, error)
+	grpc.ClientStream
+}
+
+type polygateClientStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *polygateClientStreamClient) Send(j *Job) error {
+	return x.ClientStream.SendMsg(j)
+}
+
+func (x *polygateClientStreamClient) CloseAndRecv() (*Job, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	j := new(Job)
+	if err := x.ClientStream.RecvMsg(j); err != nil {
+		return nil, err
+	}
+	return j, nil
+}
+
+var emptyJob = &Job{
+	event: &polygate_data.JobEvent{
+		Payload:  make([]byte, 0),
+		Metadata: make([]*polygate_data.MetadataItem, 0),
+	},
+}
