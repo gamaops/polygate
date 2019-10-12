@@ -69,7 +69,11 @@ func main() {
 		consumersStopWait.Wait()
 		log.Warn("Stopped consumers")
 		clientJobsWait.Wait()
-		log.Warn("All jobs are done")
+		log.Warn("No more jobs to wait")
+		if !configuration.Server.Enable {
+			closeRedisClients("job")
+		}
+		stopConsumersRedisConnections()
 		wg.Done()
 	}
 
@@ -86,10 +90,13 @@ func main() {
 			log.Warn("gRPC server stopped")
 			closeProducerListener()
 			closeRedisClients("producer")
-			wg.Done()
 			if configuration.Client.Enable {
 				stopConsumer(sig)
+				wg.Done()
+				return
 			}
+			closeRedisClients("job")
+			wg.Done()
 		}()
 	}
 

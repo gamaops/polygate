@@ -261,3 +261,12 @@ func startConsumers() {
 	}
 
 }
+
+func stopConsumersRedisConnections() {
+
+	for i := range consumers {
+		consumer := consumers[i]
+		closeRedisClients(consumer.service.Service)
+	}
+
+}
