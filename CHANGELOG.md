@@ -1,3 +1,12 @@
+## 2019-10-12T15:20:28.243Z
+### 🆕 - add code or file(s) (project)
+
+#### #1
+
+- Add graceful stop to consumers
+
+-----------------------------
+
 ## 2019-10-12T14:31:50.337Z
 ### 🆕 - add code or file(s) (project)
 
