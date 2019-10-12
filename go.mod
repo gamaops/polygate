@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
+	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/go-redis/redis v6.15.5+incompatible
 	github.com/golang/protobuf v1.3.2

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -62,6 +63,38 @@ func main() {
 
 	sigs := make(chan os.Signal, 1)
 	var wg sync.WaitGroup
+
+	if parameters.enableHotReload {
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			log.Fatalf("Error enabling the hot reload configuration watcher: %v", err)
+		}
+		defer watcher.Close()
+		go func() {
+			for {
+				select {
+				case event, ok := <-watcher.Events:
+					if !ok {
+						return
+					}
+					log.Warnf("Configuration change detected: %v", event)
+					if event.Op&fsnotify.Write == fsnotify.Write {
+						syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+					}
+				case err, ok := <-watcher.Errors:
+					if !ok {
+						return
+					}
+					log.Println("error:", err)
+				}
+			}
+		}()
+		err = watcher.Add(parameters.configurationFile)
+		if err != nil {
+			log.Fatalf("Error while adding the configuration file to watcher: %v", err)
+		}
+		log.Infof("Hot reload enabled, watching file: %v", parameters.configurationFile)
+	}
 
 	stopConsumer := func(sig os.Signal) {
 		log.Warnf("Stopping client, signal received: %v", sig)
