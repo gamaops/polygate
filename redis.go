@@ -36,7 +36,7 @@ func startRedisClient(key string, poolSize int) {
 
 		var address strings.Builder
 
-		address.WriteString(node.Address)
+		address.WriteString(node.Host)
 		address.WriteRune(':')
 		address.WriteString(strconv.Itoa(int(node.Port)))
 

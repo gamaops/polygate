@@ -32,11 +32,6 @@ protos:
       client:
         address: "127.0.0.1"
         port: 4775
-        healthcheck:
-          maxRetryTime: 30000
-          retries: 5
-          randomize: true
-          minTimeout: 2000
       methods:
         - name: SendUnaryMock
           pattern: queue
@@ -53,11 +48,6 @@ protos:
       client:
         address: "127.0.0.1"
         port: 4775
-        healthcheck:
-          maxRetryTime: 30000
-          retries: 5
-          randomize: true
-          minTimeout: 2000
       methods:
         - name: SendClientStreamMock
           pattern: fireAndForget
