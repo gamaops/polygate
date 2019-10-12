@@ -1,3 +1,12 @@
+## 2019-10-12T15:27:04.927Z
+### 🆕 - add code or file(s) (project)
+
+#### #1
+
+- Add graceful stop to jobs and consumers Redis connections
+
+-----------------------------
+
 ## 2019-10-12T15:20:28.243Z
 ### 🆕 - add code or file(s) (project)
 
