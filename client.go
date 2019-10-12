@@ -5,6 +5,7 @@ import (
 	polygate_data "polygate/polygate-data"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -34,6 +35,7 @@ type ClientUpstream struct {
 
 var clientJobHandlers map[string]map[string]func(*Job)
 var clientUpstreams map[string]*ClientUpstream
+var clientJobsWait = sync.WaitGroup{}
 
 func parseStreamItemToJob(consumer *Consumer, stack *ConsumerRedisStack, rawStream string, id string, data map[string]interface{}) {
 	event := &polygate_data.JobEvent{}
@@ -186,6 +188,9 @@ func loadClientJobHandlers() {
 			if method.Pattern == "queue" {
 				methodsHandlers[method.Name] = func(job *Job) {
 
+					clientJobsWait.Add(1)
+					defer clientJobsWait.Done()
+
 					err := job.Ack()
 					log.Debugf("Acknowledge job: %v", job.event.Id)
 					if err != nil {
@@ -248,6 +253,9 @@ func loadClientJobHandlers() {
 				}
 
 				methodsHandlers[method.Name] = func(job *Job) {
+
+					clientJobsWait.Add(1)
+					defer clientJobsWait.Done()
 
 					md := metadataFromJobEvent(job.event)
 

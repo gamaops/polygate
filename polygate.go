@@ -63,9 +63,18 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	var wg sync.WaitGroup
 
+	stopConsumer := func(sig os.Signal) {
+		log.Warnf("Stopping client, signal received: %v", sig)
+		consumersStopped = true
+		consumersStopWait.Wait()
+		log.Warn("Stopped consumers")
+		clientJobsWait.Wait()
+		log.Warn("All jobs are done")
+		wg.Done()
+	}
+
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	startConsumers()
 	if configuration.Server.Enable {
 		startProducerListener()
 		server := createServer()
@@ -78,7 +87,21 @@ func main() {
 			closeProducerListener()
 			closeRedisClients("producer")
 			wg.Done()
+			if configuration.Client.Enable {
+				stopConsumer(sig)
+			}
 		}()
+	}
+
+	if configuration.Client.Enable {
+		startConsumers()
+		wg.Add(1)
+		if !configuration.Server.Enable {
+			go func() {
+				sig := <-sigs
+				stopConsumer(sig)
+			}()
+		}
 	}
 
 	//http.ListenAndServe("localhost:8088", nil)

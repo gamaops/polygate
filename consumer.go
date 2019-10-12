@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -35,6 +36,8 @@ type Consumer struct {
 }
 
 var consumers = make(map[string]*Consumer)
+var consumersStopped = false
+var consumersStopWait = sync.WaitGroup{}
 
 func acquireJobs(consumer *Consumer, stack *ConsumerRedisStack) {
 
@@ -95,6 +98,10 @@ func acquireJobs(consumer *Consumer, stack *ConsumerRedisStack) {
 func acquireJobsLoop(consumer *Consumer, stack *ConsumerRedisStack) {
 
 	for range stack.wakeUpCh {
+		if consumersStopped {
+			consumersStopWait.Done()
+			return
+		}
 		if atomic.SwapInt32(&stack.consuming, 1) == 1 {
 			continue
 		}
@@ -248,6 +255,7 @@ func startConsumers() {
 		log.Debugf("Consuming service: %v", consumer.service.Service)
 		for _, stack := range consumer.stacks {
 			stack.WakeUp()
+			consumersStopWait.Add(1)
 			go acquireJobsLoop(consumer, stack)
 		}
 	}
