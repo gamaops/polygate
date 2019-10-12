@@ -5,7 +5,6 @@ import (
 	polygate_data "polygate/polygate-data"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -15,16 +14,16 @@ import (
 )
 
 type MethodClientStream struct {
-	stream *polygateClientStreamClient
-	ctx    context.Context
-	timer  *ResetableTimer
+	stream              *polygateClientStreamClient
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	invalidationTimeout time.Duration
 }
 
 type UpstreamMethod struct {
 	route            string
 	clientStreamDesc *grpc.StreamDesc
-	clientStreams    sync.Map
-	lock             sync.Mutex
+	clientStreams    *SafePool
 }
 
 type ClientUpstream struct {
@@ -102,15 +101,7 @@ func loadClientConn(service *ConfigurationServiceExpose) *grpc.ClientConn {
 
 }
 
-func ensureJobClientStream(upstream *ClientUpstream, method *UpstreamMethod, md *metadata.MD, timeout time.Duration) (*MethodClientStream, error) {
-
-	callID := md.Get("callId")[0]
-
-	methodClientStream, ok := method.clientStreams.Load(callID)
-
-	if ok {
-		return methodClientStream.(*MethodClientStream), nil
-	}
+func createJobClientStream(upstream *ClientUpstream, method *UpstreamMethod) (*MethodClientStream, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -123,49 +114,38 @@ func ensureJobClientStream(upstream *ClientUpstream, method *UpstreamMethod, md 
 
 	clientStream := &polygateClientStreamClient{stream}
 
-	newClientStream := &MethodClientStream{
+	methodClientStream := &MethodClientStream{
 		stream: clientStream,
 		ctx:    ctx,
-		timer:  NewResetableTimer(timeout, 1),
+		cancel: cancel,
 	}
 
+	log.Debug("New stream created")
+
+	return methodClientStream, nil
+
+}
+
+func invalidateJobClientStream(methodClientStream *MethodClientStream) {
+	log.Debug("Stream timeout while waiting for next use")
+
+	timer := NewResetableTimer(methodClientStream.invalidationTimeout)
+
 	go func() {
-		status := <-newClientStream.timer.Status
-		if status == RTTimeout {
-			method.clientStreams.Delete(callID)
-			log.Debugf("Stream timeout while waiting for next: %v", callID)
-
-			go func() {
-				_, err := newClientStream.stream.CloseAndRecv()
-				newClientStream.timer.Status <- RTCancel
-				cancel()
-				if err != nil {
-					log.WithFields(map[string]interface{}{
-						"callId": callID,
-					}).Warnf("Client stream rejected: %v", err)
-				} else {
-					log.WithFields(map[string]interface{}{
-						"callId": callID,
-					}).Info("Client stream resolved")
-				}
-			}()
-			go newClientStream.timer.Start()
-
-			switch <-newClientStream.timer.Status {
-			case RTTimeout:
-				log.WithFields(map[string]interface{}{
-					"callId": callID,
-				}).Warn("Stream cancelled")
-				cancel()
-			}
-
+		_, err := methodClientStream.stream.CloseAndRecv()
+		timer.Cancel()
+		if err != nil {
+			log.Warnf("Client stream rejected: %v", err)
+		} else {
+			log.Info("Client stream resolved")
 		}
 	}()
 
-	method.clientStreams.Store(callID, newClientStream)
-
-	return newClientStream, nil
-
+	switch <-timer.Status {
+	case RTTimeout:
+		log.Warn("Stream cancelled")
+		methodClientStream.cancel()
+	}
 }
 
 func loadClientJobHandlers() {
@@ -198,8 +178,7 @@ func loadClientJobHandlers() {
 			upstreamMethod := &UpstreamMethod{
 				route:            methodRoute.String(),
 				clientStreamDesc: nil,
-				clientStreams:    sync.Map{},
-				lock:             sync.Mutex{},
+				clientStreams:    nil,
 			}
 
 			clientUpstream.methods[method.Name] = upstreamMethod
@@ -251,20 +230,28 @@ func loadClientJobHandlers() {
 					StreamName:    method.Name,
 					ClientStreams: true,
 				}
+
 				timeoutWaitForNext, err := time.ParseDuration(method.TimeoutWaitForNext)
 				if err != nil {
 					log.Fatalf("Invalid duration for timeoutWaitForNext: %v", err)
 				}
+
+				clientStreams := NewSafePool()
+
+				upstreamMethod.clientStreams = clientStreams
+
+				clientStreams.New = func() (interface{}, error) {
+					return createJobClientStream(clientUpstream, upstreamMethod)
+				}
+				clientStreams.Invalidate = func(item interface{}) {
+					invalidateJobClientStream(item.(*MethodClientStream))
+				}
+
 				methodsHandlers[method.Name] = func(job *Job) {
 
 					md := metadataFromJobEvent(job.event)
 
-					methodClientStream, err := ensureJobClientStream(
-						clientUpstream,
-						upstreamMethod,
-						&md,
-						timeoutWaitForNext,
-					)
+					item, err := clientStreams.Get(timeoutWaitForNext)
 
 					callID := md.Get("callId")[0]
 
@@ -282,6 +269,8 @@ func loadClientJobHandlers() {
 						return
 					}
 
+					methodClientStream := item.(*MethodClientStream)
+
 					err = methodClientStream.stream.Send(job)
 
 					if err != nil {
@@ -298,7 +287,7 @@ func loadClientJobHandlers() {
 						return
 					}
 
-					methodClientStream.timer.Reset()
+					go clientStreams.Put(item, timeoutWaitForNext)
 
 					err = job.Ack()
 					if err != nil {
