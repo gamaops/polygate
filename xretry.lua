@@ -45,9 +45,13 @@ end
 
 for i = 1, #toRetry do
   local claim = rcall("XCLAIM", toRetry[i][5], KEYS[1], KEYS[2], deadline, toRetry[i][1], "RETRYCOUNT", toRetry[i][4]+1)
-  if #claim > 0 and claim[1] ~= false then
-    toRetry[i][#toRetry[i]+1] = claim[1][2]
-    claimed[#claimed+1] = toRetry[i]
+  if #claim > 0 then
+    if claim[1] ~= false then
+      toRetry[i][#toRetry[i]+1] = claim[1][2]
+      claimed[#claimed+1] = toRetry[i]
+    else
+      rcall("XACK", toRetry[i][5], KEYS[1], toRetry[i][1])
+    end
   end
 end
 
