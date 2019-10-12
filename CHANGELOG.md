@@ -1,3 +1,12 @@
+## 2019-10-12T22:52:59.446Z
+### 🆕 - add code or file(s) (project)
+
+#### #4
+
+- Add Redis Sentinel support, must be tested
+
+-----------------------------
+
 ## 2019-10-12T22:26:24.934Z
 ### 🆕 - add code or file(s) (project)
 
