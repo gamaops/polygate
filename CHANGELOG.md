@@ -1,3 +1,12 @@
+## 2019-10-12T22:26:24.934Z
+### 🆕 - add code or file(s) (project)
+
+#### #3
+
+- Add default values for configuration
+
+-----------------------------
+
 ## 2019-10-12T21:52:44.067Z
 ### 🐛 - fixing a bug (project)
 
