@@ -1,3 +1,12 @@
+## 2019-10-12T15:47:45.878Z
+### 🆕 - add code or file(s) (project)
+
+#### #2
+
+- Add hot reload feature
+
+-----------------------------
+
 ## 2019-10-12T15:27:04.927Z
 ### 🆕 - add code or file(s) (project)
 
