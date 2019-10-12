@@ -1,3 +1,12 @@
+## 2019-10-12T21:52:44.067Z
+### 🐛 - fixing a bug (project)
+
+#### none
+
+- Fix a small bug on XRETRY script (claimed capped messages should be ignored/ack)
+
+-----------------------------
+
 ## 2019-10-12T15:47:45.878Z
 ### 🆕 - add code or file(s) (project)
 
