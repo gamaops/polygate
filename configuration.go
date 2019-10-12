@@ -88,7 +88,6 @@ func loadParameters() Parameters {
 }
 
 type ConfigurationMethodExpose struct {
-	// TODO: Add pattern validation: queue, fireAndForget
 	Pattern            string
 	Name               string
 	Capped             uint64
@@ -119,11 +118,17 @@ type Configuration struct {
 		Prefix      string
 		JobPoolSize int `yaml:"jobPoolSize"`
 		Nodes       []struct {
-			Sequence uint16
-			Host     string
-			Port     uint16
-			Db       uint8
-			Password string
+			Sequence      uint16
+			Host          string
+			Port          uint16
+			Db            uint8
+			Password      string
+			Sentinel      bool
+			Master        string
+			SentinelNodes []struct {
+				Host string
+				Port uint16
+			}
 		}
 	}
 	Server struct {
@@ -191,6 +196,24 @@ func defaultRedisValues(conf *Configuration) {
 	for i := range conf.Redis.Nodes {
 
 		node := &conf.Redis.Nodes[i]
+
+		if node.Sentinel {
+			if len(node.Master) == 0 {
+				log.Fatalf("Master name must be specified for sentinel, node %v", i)
+			}
+			if len(node.SentinelNodes) == 0 {
+				log.Fatalf("You must specify at least one sentinel node, node %v", i)
+			}
+			for t := range node.SentinelNodes {
+				sentinel := &node.SentinelNodes[t]
+				if len(sentinel.Host) == 0 {
+					log.Fatalf("Redis Sentinel node %v must have a valid address, node %v", t, i)
+				} else if sentinel.Port <= 0 {
+					log.Fatalf("Redis Sentinel node %v must have a valid port, node %v", t, i)
+				}
+			}
+			continue
+		}
 
 		if len(node.Host) == 0 {
 			log.Fatalf("Redis node %v must have a valid address", i)

@@ -34,6 +34,31 @@ func startRedisClient(key string, poolSize int) {
 
 	for index, node := range configuration.Redis.Nodes {
 
+		if node.Sentinel {
+
+			addresses := make([]string, len(node.SentinelNodes))
+
+			for i, sentinel := range node.SentinelNodes {
+				var address strings.Builder
+
+				address.WriteString(sentinel.Host)
+				address.WriteRune(':')
+				address.WriteString(strconv.Itoa(int(sentinel.Port)))
+
+				addresses[i] = address.String()
+			}
+
+			redisClients[key][index] = redis.NewFailoverClient(&redis.FailoverOptions{
+				Password:      node.Password,
+				DB:            int(node.Db),
+				MasterName:    node.Master,
+				SentinelAddrs: addresses,
+				PoolSize:      poolSize,
+				MinIdleConns:  poolSize,
+			})
+			continue
+		}
+
 		var address strings.Builder
 
 		address.WriteString(node.Host)

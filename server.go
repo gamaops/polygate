@@ -22,7 +22,7 @@ func createServiceServer(server *grpc.Server, expose *ConfigurationServiceExpose
 
 	for i := range expose.Methods {
 		method := &expose.Methods[i]
-		if method.Pattern == "queue" { // Unary Call Handler
+		if method.Pattern == "queue" {
 			handler := func(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 
 				in := new(Job)
@@ -60,7 +60,7 @@ func createServiceServer(server *grpc.Server, expose *ConfigurationServiceExpose
 				MethodName: method.Name,
 				Handler:    handler,
 			})
-		} else if method.Pattern == "fireAndForget" { // TODO: Client Stream Handler
+		} else if method.Pattern == "fireAndForget" {
 
 			handler := func(srv interface{}, stream grpc.ServerStream) error {
 
