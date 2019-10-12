@@ -1,3 +1,12 @@
+## 2019-10-12T14:31:50.337Z
+### 🆕 - add code or file(s) (project)
+
+#### none
+
+- Finish the PoC to client stream (fire and forget pattern)
+
+-----------------------------
+
 ## 2019-10-11T18:56:52.891Z
 ### 🆕 - add code or file(s) (project)
 
