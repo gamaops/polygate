@@ -1,7 +1,6 @@
 package main
 
 import (
-	//_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"strings"
@@ -9,6 +8,7 @@ import (
 	"syscall"
 
 	stdlog "log"
+	_ "net/http/pprof"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-redis/redis"
