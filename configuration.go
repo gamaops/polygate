@@ -141,9 +141,10 @@ type Configuration struct {
 		Enable bool
 	}
 	Metrics struct {
-		Address string
-		Port    uint16
-		Routes  struct {
+		Address         string
+		ShutdownTimeout string `yaml:"shutdownTimeout"`
+		Port            uint16
+		Routes          struct {
 			Metrics   string
 			Readiness string
 			Liveness  string
@@ -245,6 +246,10 @@ func defaultMetricsValues(conf *Configuration) {
 
 	if len(conf.Metrics.Address) == 0 {
 		conf.Metrics.Address = "0.0.0.0"
+	}
+
+	if len(conf.Metrics.ShutdownTimeout) == 0 {
+		conf.Metrics.ShutdownTimeout = "15"
 	}
 
 	if conf.Metrics.Port <= 0 {

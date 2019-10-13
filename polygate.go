@@ -42,6 +42,7 @@ func init() {
 	configuration = loadConfiguration()
 
 	if configuration.Server.Enable {
+		loadProducerMetrics()
 		startRedisClient("job", configuration.Redis.JobPoolSize)
 		startRedisClient("producer", 1)
 		var producerID strings.Builder
@@ -57,6 +58,7 @@ func init() {
 	}
 
 	if configuration.Client.Enable {
+		loadConsumerMetrics()
 		if !configuration.Server.Enable {
 			startRedisClient("job", configuration.Redis.JobPoolSize)
 		}
@@ -70,6 +72,9 @@ func main() {
 
 	sigs := make(chan os.Signal, 1)
 	var wg sync.WaitGroup
+
+	loadMetricsServer()
+	startMetricsServer()
 
 	if parameters.enableHotReload {
 		watcher, err := fsnotify.NewWatcher()
@@ -105,6 +110,7 @@ func main() {
 
 	stopConsumer := func(sig os.Signal) {
 		log.Warnf("Stopping client, signal received: %v", sig)
+		consumerReady.Set(0)
 		consumersStopped = true
 		consumersStopWait.Wait()
 		log.Warn("Stopped consumers")
@@ -114,6 +120,7 @@ func main() {
 			closeRedisClients("job")
 		}
 		stopConsumersRedisConnections()
+		stopMetricsServer()
 		wg.Done()
 	}
 
@@ -126,6 +133,7 @@ func main() {
 		go func() {
 			sig := <-sigs
 			log.Warnf("Stopping server, signal received: %v", sig)
+			producerReady.Set(0)
 			server.GracefulStop()
 			log.Warn("gRPC server stopped")
 			closeProducerListener()
@@ -136,6 +144,7 @@ func main() {
 				return
 			}
 			closeRedisClients("job")
+			stopMetricsServer()
 			wg.Done()
 		}()
 	}
@@ -151,7 +160,8 @@ func main() {
 		}
 	}
 
-	//http.ListenAndServe("localhost:8088", nil)
+	polygateUp.Set(1)
+
 	wg.Wait()
 
 }

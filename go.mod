@@ -13,6 +13,8 @@ require (
 	github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6 // indirect
 	github.com/onsi/ginkgo v1.10.2 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
+	github.com/prometheus/client_golang v1.1.0
+	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
 	github.com/rs/xid v1.2.1
 	github.com/sirupsen/logrus v1.4.2
 	golang.org/x/sys v0.0.0-20191010194322-b09406accb47 // indirect

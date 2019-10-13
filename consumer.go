@@ -259,6 +259,7 @@ func startConsumers() {
 			go acquireJobsLoop(consumer, stack)
 		}
 	}
+	consumerReady.Set(1)
 
 }
 

@@ -8,6 +8,7 @@ import (
 
 	polygate_data "polygate/polygate-data"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/xid"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -22,13 +23,23 @@ func createServiceServer(server *grpc.Server, expose *ConfigurationServiceExpose
 
 	for i := range expose.Methods {
 		method := &expose.Methods[i]
+		mJobCount := producerJobCount.WithLabelValues(expose.Service, method.Name, method.Stream)
+		mJobExecutionSeconds := producerJobExecutionSeconds.WithLabelValues(expose.Service, method.Name, method.Stream)
+		mJobPayloadBytes := producerJobPayloadBytes.WithLabelValues(expose.Service, method.Name, method.Stream)
+		mJobEventBytes := producerJobEventBytes.WithLabelValues(expose.Service, method.Name, method.Stream)
 		if method.Pattern == "queue" {
+			mFailedJobCount := producerFailedJobCount.WithLabelValues(expose.Service, method.Name, method.Stream)
 			handler := func(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+
+				mJobCount.Inc()
+				timer := prometheus.NewTimer(mJobExecutionSeconds)
+				defer timer.ObserveDuration()
 
 				in := new(Job)
 				err := dec(in)
 
 				if err != nil {
+					mFailedJobCount.Inc()
 					return nil, err
 				}
 
@@ -45,12 +56,13 @@ func createServiceServer(server *grpc.Server, expose *ConfigurationServiceExpose
 					addMetadataToJobEvent(md, in.event)
 				}
 
-				outEvent := sendJobAndAwait(in, method)
+				outEvent := sendJobAndAwait(in, method, mJobPayloadBytes, mJobEventBytes)
 				md = metadataFromJobEvent(outEvent)
 				grpc.SendHeader(ctx, md)
 
 				if outEvent.Status == polygate_data.JobEvent_REJECTED {
 					st := statusFromJobEvent(outEvent)
+					mFailedJobCount.Inc()
 					return nil, st.Err()
 				}
 
@@ -61,8 +73,12 @@ func createServiceServer(server *grpc.Server, expose *ConfigurationServiceExpose
 				Handler:    handler,
 			})
 		} else if method.Pattern == "fireAndForget" {
-
+			mClientStreamsCount := producerClientStreamsCount.WithLabelValues(expose.Service, method.Name, method.Stream)
 			handler := func(srv interface{}, stream grpc.ServerStream) error {
+
+				mClientStreamsCount.Inc()
+				timer := prometheus.NewTimer(mJobExecutionSeconds)
+				defer timer.ObserveDuration()
 
 				clientStream := &polygateClientStream{stream}
 				callID := xid.New().String()
@@ -74,12 +90,16 @@ func createServiceServer(server *grpc.Server, expose *ConfigurationServiceExpose
 
 				for {
 
+					mJobCount.Inc()
+
 					in, err := clientStream.Recv()
 					if err == io.EOF {
 						// TODO: Send as metadata callId
+						mClientStreamsCount.Dec()
 						return clientStream.SendAndClose(emptyJob)
 					}
 					if err != nil {
+						mClientStreamsCount.Dec()
 						return err
 					}
 
@@ -103,7 +123,7 @@ func createServiceServer(server *grpc.Server, expose *ConfigurationServiceExpose
 						"jobId":  in.event.Id,
 					}).Info("New job on client stream call")
 
-					go sendJob(in, method)
+					go sendJob(in, method, mJobPayloadBytes, mJobEventBytes)
 
 				}
 			}
@@ -156,6 +176,8 @@ func createServer() *grpc.Server {
 	}()
 
 	log.Infof("gRPC server is listening on: %v", location)
+
+	producerReady.Set(1)
 
 	return server
 

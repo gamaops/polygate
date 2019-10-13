@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/golang/protobuf/proto"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -23,7 +24,7 @@ func logEvent(job *Job, data []byte) {
 	}).Info("New event received")
 }
 
-func sendJob(job *Job, method *ConfigurationMethodExpose) string {
+func sendJob(job *Job, method *ConfigurationMethodExpose, mPayload prometheus.Observer, mEvent prometheus.Observer) string {
 
 	jobClient := routeRedisClient("job", []byte(job.event.Id))
 
@@ -32,6 +33,9 @@ func sendJob(job *Job, method *ConfigurationMethodExpose) string {
 	if err != nil {
 		log.Fatalf("Error while encoding event to protobuf: %v", err)
 	}
+
+	mPayload.Observe(float64(len(job.event.Payload)))
+	mEvent.Observe(float64(len(data)))
 
 	logEvent(job, data)
 
@@ -69,11 +73,11 @@ func sendJob(job *Job, method *ConfigurationMethodExpose) string {
 
 }
 
-func sendJobAndAwait(job *Job, method *ConfigurationMethodExpose) *polygate_data.JobEvent {
+func sendJobAndAwait(job *Job, method *ConfigurationMethodExpose, mPayload prometheus.Observer, mEvent prometheus.Observer) *polygate_data.JobEvent {
 
 	ch := make(chan *polygate_data.JobEvent)
 	jobAwaitChannels.Store(job.event.Id, ch)
-	go sendJob(job, method)
+	go sendJob(job, method, mPayload, mEvent)
 	event := <-ch
 	jobAwaitChannels.Delete(job.event.Id)
 	return event

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -185,8 +186,15 @@ func loadClientJobHandlers() {
 
 			clientUpstream.methods[method.Name] = upstreamMethod
 
+			mJobCount := consumerJobCount.WithLabelValues(service.Service, method.Name, method.Stream)
+			mJobExecutionSeconds := consumerJobExecutionSeconds.WithLabelValues(service.Service, method.Name, method.Stream)
+
 			if method.Pattern == "queue" {
 				methodsHandlers[method.Name] = func(job *Job) {
+
+					mJobCount.Inc()
+					timer := prometheus.NewTimer(mJobExecutionSeconds)
+					defer timer.ObserveDuration()
 
 					clientJobsWait.Add(1)
 					defer clientJobsWait.Done()
@@ -241,18 +249,29 @@ func loadClientJobHandlers() {
 					log.Fatalf("Invalid duration for timeoutWaitForNext: %v", err)
 				}
 
+				mClientStreamsCount := consumerClientStreamsCount.WithLabelValues(service.Service, method.Name, method.Stream)
+
 				clientStreams := NewSafePool()
 
 				upstreamMethod.clientStreams = clientStreams
 
 				clientStreams.New = func() (interface{}, error) {
-					return createJobClientStream(clientUpstream, upstreamMethod)
+					clientStream, err := createJobClientStream(clientUpstream, upstreamMethod)
+					if err == nil {
+						mClientStreamsCount.Inc()
+					}
+					return clientStream, err
 				}
 				clientStreams.Invalidate = func(item interface{}) {
 					invalidateJobClientStream(item.(*MethodClientStream))
+					mClientStreamsCount.Dec()
 				}
 
 				methodsHandlers[method.Name] = func(job *Job) {
+
+					mJobCount.Inc()
+					timer := prometheus.NewTimer(mJobExecutionSeconds)
+					defer timer.ObserveDuration()
 
 					clientJobsWait.Add(1)
 					defer clientJobsWait.Done()
