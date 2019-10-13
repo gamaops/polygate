@@ -1,3 +1,12 @@
+## 2019-10-13T09:26:16.036Z
+### 🆕 - add code or file(s) (project)
+
+#### #5
+
+- Import net/http/pprof to enable profiling
+
+-----------------------------
+
 ## 2019-10-13T09:13:42.179Z
 ### 🆕 - add code or file(s) (project)
 
