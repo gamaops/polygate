@@ -1,3 +1,12 @@
+## 2019-10-13T21:45:40.268Z
+### 📝 - writing docs (project)
+
+#### #7
+
+- Add Knowledge section of docs
+
+-----------------------------
+
 ## 2019-10-13T14:39:59.017Z
 ### 🆕 - add code or file(s) (project)
 
