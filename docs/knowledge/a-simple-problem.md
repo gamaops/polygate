@@ -1,0 +1,7 @@
+# A simple problem
+
+To understand why Polygate exists I think the best way is to understand the main problem that it solves. What if we want to build a services architecture without having to implement the best of this world (event sourcing, CQRS, asynchronous communication, tracing, monitoring) on each service? Yes, I know there're lots of design patterns to help us to achieve the beauty of distributed computing. One common pattern is the shared library. Using hexagonal architecture we could just implement our services focusing on business problems and leave interfaces to connect all the infrastructure stuff. But I think that creating a shared library is a thin line between using it correctly and creating a real anti pattern that couples services with their infrastructure details and it keeps an increasing complexity curve to maintain it.
+
+Other problem is if you have an environment with more than one stack/language is really hard to have multiple shared libraries keeping compatibility through them with all the adopted stacks. So you need to have in mind that Polygate is an opined solution, but I keep my mind open to anyone that wants to propose new features, directions of the project or breaking changes (when they make sense).
+
+Polygate was thought to perform really well with Redis/KeyDB, Kubernetes and gRPC. With Polygate you will have to design asynchronous flows but your service's implementation (at least at the code level) will appear to be synchronous making simple to have a rich and reliable event sourcing environment.
