@@ -1,3 +1,12 @@
+## 2019-10-13T09:13:42.179Z
+### 🆕 - add code or file(s) (project)
+
+#### #4
+
+- Test sentinel support and add specialized logger
+
+-----------------------------
+
 ## 2019-10-12T22:52:59.446Z
 ### 🆕 - add code or file(s) (project)
 
