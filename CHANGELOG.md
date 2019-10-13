@@ -1,3 +1,12 @@
+## 2019-10-13T14:39:59.017Z
+### 🆕 - add code or file(s) (project)
+
+#### #6
+
+- Add Prometheus metrics server and liveness/readiness probes routes
+
+-----------------------------
+
 ## 2019-10-13T09:26:16.036Z
 ### 🆕 - add code or file(s) (project)
 
