@@ -8,7 +8,10 @@ import (
 	"sync"
 	"syscall"
 
+	stdlog "log"
+
 	"github.com/fsnotify/fsnotify"
+	"github.com/go-redis/redis"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,6 +34,10 @@ func init() {
 	parameters = loadParameters()
 
 	log.SetLevel(parameters.logLevel)
+
+	redisLogger := stdlog.New(log.StandardLogger().Writer(), "", 0)
+
+	redis.SetLogger(redisLogger)
 
 	configuration = loadConfiguration()
 

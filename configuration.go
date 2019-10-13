@@ -128,7 +128,7 @@ type Configuration struct {
 			SentinelNodes []struct {
 				Host string
 				Port uint16
-			}
+			} `yaml:"sentinelNodes"`
 		}
 	}
 	Server struct {
