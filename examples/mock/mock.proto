@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+import "empty.proto";
+
+package mock.v1;
+
+message MockedMessage {
+  bool success = 1;
+  string currentTime = 2;
+  string source = 3;
+  bool fail = 4;
+  uint32 delay = 5;
+  uint32 currentStatus = 6;
+}
+
+service MockedUnaryService {
+  rpc SendUnaryMock (MockedMessage) returns (MockedMessage);
+}
+
+service MockedClientStreamService {
+  rpc SendClientStreamMock (stream MockedMessage) returns (google.protobuf.Empty);
+}

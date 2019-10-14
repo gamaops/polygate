@@ -1,0 +1,3 @@
+#!/bin/bash
+curl -X POST -d '{"service":"MockedUnaryService","method":"SendUnaryMock","input":{"contains":{"success":true}},"output":{"data":{"success": true,"currentTime":"2019-10-14T13:53:01.204Z","source":"grpc-mocked-server","fail":false,"delay":0,"currentStatus":1}}}' localhost:4771/add
+curl -X POST -d '{"service":"MockedClientStreamService","method":"SendClientStreamMock","input":{"contains":{"success":true}},"output":{"data":{"success": true,"currentTime":"2019-10-14T13:53:01.204Z","source":"grpc-mocked-server","fail":false,"delay":0,"currentStatus":1}}}' localhost:4771/add
