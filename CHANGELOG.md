@@ -1,3 +1,12 @@
+## 2019-10-14T21:20:44.730Z
+### 📝 - writing docs (project)
+
+#### #7
+
+- Finish the getting started section
+
+-----------------------------
+
 ## 2019-10-14T20:52:35.119Z
 ### 📝 - writing docs (project)
 
