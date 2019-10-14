@@ -8,7 +8,7 @@
 
 - Getting Started
 
-   - [Environment Setup](getting-started/environment-setup.md)
+   - [Environment setup](getting-started/environment-setup.md)
    - [Configuration](getting-started/configuration.md)
    - [Running Polygate](getting-started/running-polygate.md)
 
