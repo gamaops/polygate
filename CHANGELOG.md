@@ -1,3 +1,12 @@
+## 2019-10-14T09:31:00.787Z
+### 📝 - writing docs (project)
+
+#### #7
+
+- Add configuration specs
+
+-----------------------------
+
 ## 2019-10-14T08:55:19.995Z
 ### 🆕 - add code or file(s) (project)
 
