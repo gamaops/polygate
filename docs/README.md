@@ -2,6 +2,12 @@
 <img src="assets/images/logo.png"/>
 </div>
 
+<div style="text-align: center;margin-top:20px">
+<a href="https://gitter.im/gopolygate/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge" target="_blank">
+<img src="https://badges.gitter.im/gopolygate/community.svg" alt="Join the chat at https://gitter.im/gopolygate/community" title="Join the chat at https://gitter.im/gopolygate/community"/>
+</a>
+</div>
+
 ------------------
 
 ### What is?
