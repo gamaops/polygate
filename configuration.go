@@ -3,7 +3,6 @@ package main
 import (
 	"io/ioutil"
 	"os"
-	"strconv"
 
 	"gopkg.in/yaml.v2"
 
@@ -11,23 +10,17 @@ import (
 )
 
 type Parameters struct {
-	enableHotReload            bool
-	logLevel                   log.Level
-	terminateTimeout           uint32
-	configurationFile          string
-	terminateGRPCServerTimeout uint32
-	serializePayloadBase64     bool
+	enableHotReload   bool
+	logLevel          log.Level
+	configurationFile string
 }
 
 func loadParameters() Parameters {
 
 	parameters := Parameters{
-		enableHotReload:            true,
-		logLevel:                   log.DebugLevel,
-		terminateTimeout:           15000,
-		terminateGRPCServerTimeout: 7000,
-		serializePayloadBase64:     true,
-		configurationFile:          "",
+		enableHotReload:   true,
+		logLevel:          log.DebugLevel,
+		configurationFile: "",
 	}
 
 	configurationFile, exists := os.LookupEnv("CONFIGURATION_FILE")
@@ -55,32 +48,6 @@ func loadParameters() Parameters {
 		case "error":
 			parameters.logLevel = log.ErrorLevel
 		}
-	}
-
-	terminateTimeout, exists := os.LookupEnv("TERMINATE_TIMEOUT")
-
-	if exists {
-		value, err := strconv.ParseUint(terminateTimeout, 10, 32)
-		if err != nil {
-			log.WithField("TERMINATE_TIMEOUT", terminateTimeout).Fatal("Invalid timeout value, must be a number")
-		}
-		parameters.terminateTimeout = uint32(value)
-	}
-
-	terminateGRPCServerTimeout, exists := os.LookupEnv("TERMINATE_GRPC_SERVER_TIMEOUT")
-
-	if exists {
-		value, err := strconv.ParseUint(terminateGRPCServerTimeout, 10, 32)
-		if err != nil {
-			log.WithField("TERMINATE_GRPC_SERVER_TIMEOUT", terminateGRPCServerTimeout).Fatal("Invalid timeout value, must be a number")
-		}
-		parameters.terminateGRPCServerTimeout = uint32(value)
-	}
-
-	serializePayloadBase64, exists := os.LookupEnv("SERIALIZE_PAYLOAD_BASE64")
-
-	if exists && serializePayloadBase64 == "false" {
-		parameters.serializePayloadBase64 = false
 	}
 
 	return parameters

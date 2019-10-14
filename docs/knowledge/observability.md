@@ -19,16 +19,16 @@ The metrics server exposes Prometheus metrics to track things like:
 
 Polygate provides a dedicated route for liveness probe that responds:
 
-* 200 if everything it is up
-* 503 if everything it is down
+* 200 if everything is up
+* 503 if everything is down
 
 ## Readiness probe
 
 Polygate provides a dedicated route for readiness probe that responds:
 
-* 200 if everything it is ready
+* 200 if everything is ready
 * 206 if it is degraded (for example: if you're running consumer and producer mode on the same instance and consumer is down)
-* 503 if everything it is not ready
+* 503 if everything is not ready
 
 ## Profiling
 
