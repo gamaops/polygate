@@ -1,3 +1,12 @@
+## 2019-10-14T10:56:47.291Z
+### 📝 - writing docs (integration)
+
+#### #7
+
+- Add gitter link to doc
+
+-----------------------------
+
 ## 2019-10-14T09:31:00.787Z
 ### 📝 - writing docs (project)
 
