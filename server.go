@@ -29,6 +29,7 @@ func createServiceServer(server *grpc.Server, expose *ConfigurationServiceExpose
 		mJobEventBytes := producerJobEventBytes.WithLabelValues(expose.Service, method.Name, method.Stream)
 		if method.Pattern == "queue" {
 			mFailedJobCount := producerFailedJobCount.WithLabelValues(expose.Service, method.Name, method.Stream)
+			mWaitingResponsesCount := producerWaitingResponsesCount.WithLabelValues(expose.Service, method.Name, method.Stream)
 			handler := func(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 
 				mJobCount.Inc()
@@ -56,7 +57,7 @@ func createServiceServer(server *grpc.Server, expose *ConfigurationServiceExpose
 					addMetadataToJobEvent(md, in.event)
 				}
 
-				outEvent := sendJobAndAwait(in, method, mJobPayloadBytes, mJobEventBytes)
+				outEvent := sendJobAndAwait(in, method, mWaitingResponsesCount, mJobPayloadBytes, mJobEventBytes)
 				md = metadataFromJobEvent(outEvent)
 				grpc.SendHeader(ctx, md)
 

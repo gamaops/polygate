@@ -73,12 +73,14 @@ func sendJob(job *Job, method *ConfigurationMethodExpose, mPayload prometheus.Ob
 
 }
 
-func sendJobAndAwait(job *Job, method *ConfigurationMethodExpose, mPayload prometheus.Observer, mEvent prometheus.Observer) *polygate_data.JobEvent {
+func sendJobAndAwait(job *Job, method *ConfigurationMethodExpose, mWaitingResponsesCount prometheus.Gauge, mPayload prometheus.Observer, mEvent prometheus.Observer) *polygate_data.JobEvent {
 
 	ch := make(chan *polygate_data.JobEvent)
 	jobAwaitChannels.Store(job.event.Id, ch)
+	mWaitingResponsesCount.Inc()
 	go sendJob(job, method, mPayload, mEvent)
 	event := <-ch
+	mWaitingResponsesCount.Dec()
 	jobAwaitChannels.Delete(job.event.Id)
 	return event
 

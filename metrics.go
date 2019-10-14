@@ -17,6 +17,7 @@ import (
 var producerJobCount *prometheus.CounterVec
 var producerFailedJobCount *prometheus.CounterVec
 var consumerJobCount *prometheus.CounterVec
+var producerWaitingResponsesCount *prometheus.GaugeVec
 var producerClientStreamsCount *prometheus.GaugeVec
 var consumerClientStreamsCount *prometheus.GaugeVec
 var producerJobExecutionSeconds *prometheus.HistogramVec
@@ -55,6 +56,13 @@ func loadProducerMetrics() {
 		prometheus.GaugeOpts{
 			Name: "polygate_producer_client_streams_count",
 			Help: "The total number of current open client streams",
+		},
+		[]string{"service", "method", "stream"},
+	)
+	producerWaitingResponsesCount = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "polygate_producer_waiting_responses_count",
+			Help: "The total number of current listeners waiting for response",
 		},
 		[]string{"service", "method", "stream"},
 	)

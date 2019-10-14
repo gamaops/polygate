@@ -1,6 +1,6 @@
 # The desired solution
 
-So I started to think about a sidecar application to make my services asynchronous. But a sidecar application is just an additional hop to our requests and creates unnecessary complexity, obvious I'm not talking about all the cases (we can see the Istio performs great with this approach). So what about a proxy? Well, it seems that a proxy is the ideal solution, we can keep it stateless, it's totally abstract to application, and we can use as sidecar as well when we want. But a proxy is not asynchronous and if I want to have failover/HA features I'll have to deal with a temporary transient state (the requests/responses).
+So I started to think about a sidecar application to make my services asynchronous. But a sidecar application is just an additional hop to our requests and creates unnecessary complexity, obvious I'm not talking about all the cases (we can see Istio playing very well on this approach). So what about a proxy? Well, it seems that a proxy is the ideal solution, we can keep it stateless, it's totally abstract to application, and we can use as sidecar as well when we want. But a proxy is not asynchronous and if I want to have failover/HA features I'll have to deal with a temporary transient state (the requests/responses).
 
 And finally I got my insight: a hub-like application, where it can operate in various modes! And now we need to define some standards here.
 
