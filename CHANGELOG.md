@@ -1,3 +1,12 @@
+## 2019-10-15T11:52:18.789Z
+### 🚥 - adding tests (project)
+
+#### #14
+
+- Add unit test to timer.go
+
+-----------------------------
+
 ## 2019-10-15T09:45:24.279Z
 ### 📝 - writing docs (project)
 
