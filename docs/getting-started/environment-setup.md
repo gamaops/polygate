@@ -3,7 +3,7 @@
 You'll need a Redis 5+ container running:
 
 ```bash
-docker run --rm --name=redis -d -p 6379:6379 redis:5
+docker run --rm --name=redis -p 6379:6379 redis:5
 ```
 
 And we're going to create a mocked gRPC server, to do this you need to download the [mock](https://github.com/gamaops/polygate/tree/master/examples/mock) path from Polygate's repository. Once you downloaded the folder, navigate into it and start the gRPC mock server:

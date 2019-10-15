@@ -1,11 +1,20 @@
 <div style="text-align: center">
-<img src="assets/images/logo.png"/>
+	<img src="assets/images/logo.png"/>
 </div>
 
 <div style="text-align: center;margin-top:20px">
-<a href="https://gitter.im/gopolygate/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge" target="_blank">
-<img src="https://badges.gitter.im/gopolygate/community.svg" alt="Join the chat at https://gitter.im/gopolygate/community" title="Join the chat at https://gitter.im/gopolygate/community"/>
-</a>
+	<a href="https://gitter.im/gopolygate/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge" target="_blank" style="text-decoration: none;">
+		<img src="https://badges.gitter.im/gopolygate/community.svg" alt="Join the chat at https://gitter.im/gopolygate/community" title="Join the chat at https://gitter.im/gopolygate/community"/>
+	</a>
+	<a href="https://github.com/gamaops/polygate" target="_blank" style="text-decoration: none;">
+		<img src="https://img.shields.io/badge/github-repo-black.svg" alt="Fork me on GitHub" title="Fork me on GitHub"/>
+	</a>
+	<a href="https://github.com/gamaops/polygate/blob/master/LICENSE" target="_blank" style="text-decoration: none;">
+		<img src="https://img.shields.io/github/license/gamaops/polygate.svg" alt="Project LICENSE" title="Project LICENSE"/>
+	</a>
+	<a href="https://GitHub.com/gamaops/polygate/releases/" target="_blank" style="text-decoration: none;">
+		<img src="https://img.shields.io/github/release/gamaops/polygate.svg" alt="Download latest release" title="Download latest release"/>
+	</a>
 </div>
 
 ------------------

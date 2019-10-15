@@ -43,5 +43,5 @@ Prefer to put Polygate next to your mesh endpoints, you can use it as sidecar (a
 
 Polygate was designed to be handled by orchestrators so when any failure occurs in the client->hub->server flow it'll emit a fatal log and exit. Clients and server don't need to be aware of Polygate existence, there're just few things that you need to know when creating your services:
 
-* Polygate don't support metadata on fire and forget pattern (the reason why is explained at the **Knowledge**) section
+* Polygate doesn't support metadata on fire and forget pattern (the reason why is explained at the **Knowledge**) section
 * We currently don't support duplex or server streaming calls, but is just a matter of thinking how they will be handled by Polygate, so if you have any ideas feel free to open an issue on GitHub or chat with us through Gitter

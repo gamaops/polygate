@@ -17,11 +17,11 @@
    - [Overview](architecture/overview.md)
    - [Scenarios](architecture/scenarios.md)
 
-- Engineering
+<!-- - Engineering
 
    - [Monitoring](engineering/monitoring.md)
    - [Recommendations](engineering/recommendations.md)
-   - [Kubernetes](engineering/kubernetes.md)
+   - [Kubernetes](engineering/kubernetes.md) -->
 
 - Future
 
