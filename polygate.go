@@ -12,21 +12,22 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-redis/redis"
-	log "github.com/sirupsen/logrus"
+	logrus "github.com/sirupsen/logrus"
 )
 
 var parameters Parameters
 var configuration Configuration
 var instanceProducerID string
+var log = logrus.New()
 
-func init() {
+func setup() {
 
 	prettyLog, exists := os.LookupEnv("PRETTY_LOG")
 
 	if exists && prettyLog == "true" {
-		log.SetFormatter(&log.TextFormatter{})
+		log.SetFormatter(&logrus.TextFormatter{})
 	} else {
-		log.SetFormatter(&log.JSONFormatter{})
+		log.SetFormatter(&logrus.JSONFormatter{})
 	}
 
 	log.SetOutput(os.Stdout)
@@ -35,7 +36,7 @@ func init() {
 
 	log.SetLevel(parameters.logLevel)
 
-	redisLogger := stdlog.New(log.StandardLogger().Writer(), "", 0)
+	redisLogger := stdlog.New(logrus.StandardLogger().Writer(), "", 0)
 
 	redis.SetLogger(redisLogger)
 
@@ -69,6 +70,8 @@ func init() {
 }
 
 func main() {
+
+	setup()
 
 	sigs := make(chan os.Signal, 1)
 	var wg sync.WaitGroup

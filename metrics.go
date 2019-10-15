@@ -11,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	dto "github.com/prometheus/client_model/go"
-	log "github.com/sirupsen/logrus"
 )
 
 var producerJobCount *prometheus.CounterVec
@@ -36,6 +35,9 @@ var metricsServerShutdownTimeout time.Duration
 var metricsStatusUp = []byte("{\"status\":\"up\"}")
 var metricsStatusDegraded = []byte("{\"status\":\"degraded\"}")
 var metricsStatusDown = []byte("{\"status\":\"down\"}")
+var livenessMetric = &dto.Metric{}
+var readinessConsumerMetric = &dto.Metric{}
+var readinessProducerMetric = &dto.Metric{}
 
 func loadProducerMetrics() {
 	producerJobCount = promauto.NewCounterVec(
@@ -123,6 +125,49 @@ func loadConsumerMetrics() {
 	consumerReady.Set(0)
 }
 
+func livenessHandler(w http.ResponseWriter, r *http.Request) {
+	polygateUp.Write(livenessMetric)
+	w.Header().Add("Content-Type", "application/json")
+	if *livenessMetric.Gauge.Value == 0 {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write(metricsStatusDown)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(metricsStatusUp)
+}
+
+func readinessHandler(w http.ResponseWriter, r *http.Request) {
+	consumerStatus := 1
+	producerStatus := 1
+
+	if configuration.Server.Enable {
+		producerReady.Write(readinessProducerMetric)
+		if *readinessProducerMetric.Gauge.Value == 0 {
+			producerStatus = 0
+		}
+	}
+	if configuration.Client.Enable {
+		consumerReady.Write(readinessConsumerMetric)
+		if *readinessConsumerMetric.Gauge.Value == 0 {
+			consumerStatus = 0
+		}
+	}
+	w.Header().Add("Content-Type", "application/json")
+	if consumerStatus == 1 && producerStatus == 1 {
+		w.WriteHeader(http.StatusOK)
+		w.Write(metricsStatusUp)
+		return
+	}
+	if (consumerStatus == 0 && producerStatus == 0) || (consumerStatus == 0 && !configuration.Server.Enable) || (producerStatus == 0 && !configuration.Client.Enable) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write(metricsStatusDown)
+		return
+	}
+	w.WriteHeader(http.StatusPartialContent)
+	w.Write(metricsStatusDegraded)
+}
+
 func loadMetricsServer() {
 	duration, err := time.ParseDuration(configuration.Metrics.ShutdownTimeout)
 	if err != nil {
@@ -132,51 +177,8 @@ func loadMetricsServer() {
 
 	polygateUp.Set(0)
 	http.Handle(configuration.Metrics.Routes.Metrics, promhttp.Handler())
-	livenessMetric := &dto.Metric{}
-	http.HandleFunc(configuration.Metrics.Routes.Liveness, func(w http.ResponseWriter, r *http.Request) {
-		polygateUp.Write(livenessMetric)
-		w.Header().Add("Content-Type", "application/json")
-		if *livenessMetric.Gauge.Value == 0 {
-			w.WriteHeader(503)
-			w.Write(metricsStatusDown)
-			return
-		}
-		w.WriteHeader(200)
-		w.Write(metricsStatusUp)
-	})
-
-	readinessConsumerMetric := &dto.Metric{}
-	readinessProducerMetric := &dto.Metric{}
-	http.HandleFunc(configuration.Metrics.Routes.Readiness, func(w http.ResponseWriter, r *http.Request) {
-		consumerStatus := 1
-		producerStatus := 1
-
-		if configuration.Server.Enable {
-			producerReady.Write(readinessProducerMetric)
-			if *readinessProducerMetric.Gauge.Value == 0 {
-				producerStatus = 0
-			}
-		}
-		if configuration.Client.Enable {
-			consumerReady.Write(readinessConsumerMetric)
-			if *readinessConsumerMetric.Gauge.Value == 0 {
-				consumerStatus = 0
-			}
-		}
-		w.Header().Add("Content-Type", "application/json")
-		if consumerStatus == 1 && producerStatus == 1 {
-			w.WriteHeader(200)
-			w.Write(metricsStatusUp)
-			return
-		}
-		if (consumerStatus == 0 && producerStatus == 0) || (consumerStatus == 0 && !configuration.Server.Enable) || (producerStatus == 0 && !configuration.Client.Enable) {
-			w.WriteHeader(503)
-			w.Write(metricsStatusDown)
-			return
-		}
-		w.WriteHeader(206)
-		w.Write(metricsStatusDegraded)
-	})
+	http.HandleFunc(configuration.Metrics.Routes.Liveness, livenessHandler)
+	http.HandleFunc(configuration.Metrics.Routes.Readiness, readinessHandler)
 }
 
 func startMetricsServer() {

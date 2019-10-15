@@ -10,7 +10,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -42,7 +41,7 @@ func parseStreamItemToJob(consumer *Consumer, stack *ConsumerRedisStack, rawStre
 	event := &polygate_data.JobEvent{}
 	err := proto.Unmarshal([]byte(data["event"].(string)), event)
 	if err != nil {
-		log.Fatalf("Unable to parse data from job %v: $v", id, err)
+		log.Fatalf("Unable to parse data from job %v: %v", id, err)
 	}
 	event.StreamId = id
 	job := &Job{
@@ -59,7 +58,7 @@ func parseRetryItemToJob(consumer *Consumer, stack *ConsumerRedisStack, item []i
 	event := &polygate_data.JobEvent{}
 	err := proto.Unmarshal([]byte(data), event)
 	if err != nil {
-		log.Fatalf("Unable to parse data from job (streamId %v): $v", item[0].(string), err)
+		log.Fatalf("Unable to parse data from job (streamId %v): %v", item[0].(string), err)
 	}
 	event.StreamId = item[0].(string)
 	log.WithFields(map[string]interface{}{

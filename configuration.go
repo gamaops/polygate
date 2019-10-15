@@ -6,12 +6,12 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type Parameters struct {
 	enableHotReload   bool
-	logLevel          log.Level
+	logLevel          logrus.Level
 	configurationFile string
 }
 
@@ -19,7 +19,7 @@ func loadParameters() Parameters {
 
 	parameters := Parameters{
 		enableHotReload:   true,
-		logLevel:          log.DebugLevel,
+		logLevel:          logrus.DebugLevel,
 		configurationFile: "",
 	}
 
@@ -42,11 +42,11 @@ func loadParameters() Parameters {
 	if exists {
 		switch logLevel {
 		case "info":
-			parameters.logLevel = log.InfoLevel
+			parameters.logLevel = logrus.InfoLevel
 		case "warn":
-			parameters.logLevel = log.WarnLevel
+			parameters.logLevel = logrus.WarnLevel
 		case "error":
-			parameters.logLevel = log.ErrorLevel
+			parameters.logLevel = logrus.ErrorLevel
 		}
 	}
 

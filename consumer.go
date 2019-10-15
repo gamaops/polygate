@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-	log "github.com/sirupsen/logrus"
 )
 
 // ConsumerRedisStack is a pointer to rotate Redis client distribution list

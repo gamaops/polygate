@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/howeyc/crc16"
-	log "github.com/sirupsen/logrus"
 )
 
 // PubSubClient is a struct to hold pubsub mappings

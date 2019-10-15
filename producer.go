@@ -11,7 +11,6 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/golang/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
 )
 
 var jobAwaitChannels = sync.Map{}
