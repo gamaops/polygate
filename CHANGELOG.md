@@ -1,3 +1,12 @@
+## 2019-10-15T08:01:54.810Z
+### 🆕 - add code or file(s) (project)
+
+#### none
+
+- Use unbuffered channel for pool to avoid keeping at least one client stream open
+
+-----------------------------
+
 ## 2019-10-14T21:20:44.730Z
 ### 📝 - writing docs (project)
 
