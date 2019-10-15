@@ -12,7 +12,7 @@ type SafePool struct {
 
 func NewSafePool() *SafePool {
 	return &SafePool{
-		transfer: make(chan interface{}, 1),
+		transfer: make(chan interface{}),
 	}
 }
 

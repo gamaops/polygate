@@ -15,13 +15,13 @@
 - Architecture
 
    - [Overview](architecture/overview.md)
-   - [Events](architecture/events.md)
    - [Scenarios](architecture/scenarios.md)
 
 - Engineering
 
    - [Monitoring](engineering/monitoring.md)
    - [Recommendations](engineering/recommendations.md)
+   - [Kubernetes](engineering/kubernetes.md)
 
 - Future
 
