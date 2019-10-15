@@ -1,3 +1,12 @@
+## 2019-10-15T08:42:38.861Z
+### 📝 - writing docs (project)
+
+#### #7
+
+- Add architecture overview
+
+-----------------------------
+
 ## 2019-10-15T08:01:54.810Z
 ### 🆕 - add code or file(s) (project)
 
