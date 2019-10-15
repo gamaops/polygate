@@ -5,7 +5,7 @@ As simple as it can be, now you just need to start Polygate:
 ```bash
 docker run --rm --name=polygate -p 4774:4774 -p 9090:9090 \
 	-e "CONFIGURATION_FILE=/tmp/configuration.yaml" \
-	-e PRETTY_LOG="true" \
+	-e "PRETTY_LOG=true" \
 	-v $(pwd)/configuration.yaml:/tmp/configuration.yaml \
 	gamaops/polygate
 ```
