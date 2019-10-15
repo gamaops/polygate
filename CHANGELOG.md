@@ -1,3 +1,12 @@
+## 2019-10-15T09:45:24.279Z
+### 📝 - writing docs (project)
+
+#### #7
+
+- Add future section
+
+-----------------------------
+
 ## 2019-10-15T08:55:58.077Z
 ### 📝 - writing docs (project)
 
