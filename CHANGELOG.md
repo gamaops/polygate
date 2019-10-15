@@ -1,3 +1,12 @@
+## 2019-10-15T22:36:59.195Z
+### 🚥 - adding tests (project)
+
+#### #14
+
+- Add metrics.go unit tests
+
+-----------------------------
+
 ## 2019-10-15T11:52:18.789Z
 ### 🚥 - adding tests (project)
 
