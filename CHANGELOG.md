@@ -1,3 +1,12 @@
+## 2019-10-16T08:26:37.205Z
+### 🚥 - adding tests (project)
+
+#### #14
+
+- Add pool.go unit tests
+
+-----------------------------
+
 ## 2019-10-15T22:36:59.195Z
 ### 🚥 - adding tests (project)
 
